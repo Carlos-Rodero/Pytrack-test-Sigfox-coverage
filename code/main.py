@@ -214,10 +214,6 @@ def get_lat_lon_datetime_gps(time_searching_GPS):
             date = (2000 + date_list[2], date_list[1], (date_list[0]))
 
             datetime = tuple(date) + tuple(time)
-            date_std = "{}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.{}+00:00".format(
-                datetime[0], datetime[1], datetime[2],
-                datetime[3], datetime[4], datetime[5],
-                datetime[6])
 
             lat_list = gps.latitude_string().split("°")
             lat = float(lat_list[0])
@@ -229,7 +225,7 @@ def get_lat_lon_datetime_gps(time_searching_GPS):
 
             hdop = gps.hdop
 
-            last_data['datetime'] = date_std
+            last_data['datetime'] = datetime
             last_data['latitude'] = lat
             last_data['longitude'] = lon
             last_data['altitude'] = alt
@@ -350,12 +346,13 @@ def save_data(kdustick_id=None, deployment=None, datetime=None, lat=None,
     sd = sd_access()
     f = open(gps_filename, 'a')
 
-    datetime = "{}-{}-{} {}:{}:{}".format(datetime[0], datetime[1],
-                                          datetime[2], datetime[3],
-                                          datetime[4], datetime[5])
+    date_std = "{}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.{}+00:00".format(
+                datetime[0], datetime[1], datetime[2],
+                datetime[3], datetime[4], datetime[5],
+                datetime[6])
 
     data = "{},{},{},{},{},{},{},{},{},\n".format(kdustick_id, deployment,
-                                                  datetime, lat, lon, alt,
+                                                  date_std, lat, lon, alt,
                                                   hdop, volt, data_sent)
 
     f.write(data)
@@ -428,7 +425,7 @@ def send_data_Sigfox(data):
     Returns
     -------
         bool
-            True if data has been sent to Sigfox backend. Otherwise returns 
+            True if data has been sent to Sigfox backend. Otherwise returns
             False
     """
     # init Sigfox for RCZ1 (Europe)
