@@ -16,23 +16,31 @@ from network import Sigfox
 # is alive. Turn off firmware blinking
 pycom.heartbeat(False)
 
-kdustick_id = "B"
+# ID of device. It can be any ASCII character
+device_id = "B"
+
+# Deployment sequence. Initialize to None
+deployment_seq = None
+
+# Time values in seconds of different variables
 time_searching_GPS = 30
 time_searching_Sigfox = 60
 time_to_deep_sleep = 300
 
-deployment_seq = None
+# Boolean to save if data have been sent to Sigfox
 data_sent = False
 
+# Dictionary to save GPS values
 data_gps = {}
 data_gps['latitude'] = None
 data_gps['longitude'] = None
 data_gps['altitude'] = None
 data_gps['hdop'] = None
 
+# Variables to save path values
 sd_mount_dir = "/sd"
 deployment_filename = "/sd/deployment.txt"
-gps_filename = "/sd/gps.txt"
+data_filename = "/sd/data.txt"
 
 # color leds
 led_red = 0x7f0000
@@ -105,9 +113,9 @@ def _write_deployment():
 
 def _write_data():
     """
-    Function to write the gps file into the SD
+    Function to write the data file into the SD
     """
-    f_write = open(gps_filename, 'w')
+    f_write = open(data_filename, 'w')
     f_write.close()
 
 
@@ -283,23 +291,23 @@ def set_datetime():
 
 def save_header():
     """
-    Function to write header to gps file in SD. Header contains the following
+    Function to write header to data file in SD. Header contains the following
     values:
-    kdustick_id, deployment, datetime, latitude, longitude, altitude, hdop,
+    device_id, deployment, datetime, latitude, longitude, altitude, hdop,
     voltage and data_sent.
     """
     sd = sd_access()
     f_test = False
 
     try:
-        f_test = open(gps_filename, 'r')
+        f_test = open(data_filename, 'r')
     except OSError as e:
-        print("Error: {}. GPS file not found".format(e))
+        print("Error: {}. Data file not found".format(e))
 
     if f_test is False:
         _write_data()
-        f = open(gps_filename, 'a')
-        header = "{},{},{},{},{},{},{},{},{},\n".format("#kdustick_id",
+        f = open(data_filename, 'a')
+        header = "{},{},{},{},{},{},{},{},{},\n".format("#device_id",
                                                         "deployment",
                                                         "datetime",
                                                         "latitude",
@@ -313,16 +321,16 @@ def save_header():
     os.unmount(sd_mount_dir)
 
 
-def save_data(kdustick_id=None, deployment=None, datetime=None, lat=None,
+def save_data(device_id=None, deployment=None, datetime=None, lat=None,
               lon=None, alt=None, hdop=None, volt=None, data_sent=None):
     """
-    Function to save data in gps file in SD. Data contains the following
+    Function to save data file in SD. Data contains the following
     values:
-    kdustick_id, deployment, datetime, lat, lon, alt, hdop, volt and data_sent.
+    device_id, deployment, datetime, lat, lon, alt, hdop, volt and data_sent.
 
     Parameters
     ----------
-        kdustick_id: string
+        device_id: string
             the id of the prototype
         deployment: string
             the deployment sequence of the measurement
@@ -344,14 +352,14 @@ def save_data(kdustick_id=None, deployment=None, datetime=None, lat=None,
     """
 
     sd = sd_access()
-    f = open(gps_filename, 'a')
+    f = open(data_filename, 'a')
 
     date_std = "{}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.{}+00:00".format(
                 datetime[0], datetime[1], datetime[2],
                 datetime[3], datetime[4], datetime[5],
                 datetime[6])
 
-    data = "{},{},{},{},{},{},{},{},{},\n".format(kdustick_id, deployment,
+    data = "{},{},{},{},{},{},{},{},{},\n".format(device_id, deployment,
                                                   date_std, lat, lon, alt,
                                                   hdop, volt, data_sent)
 
@@ -362,15 +370,15 @@ def save_data(kdustick_id=None, deployment=None, datetime=None, lat=None,
     os.unmount(sd_mount_dir)
 
 
-def convert_data_to_payload_gps(kdustick_id=None, deployment=None, lat=None,
+def convert_data_to_payload_gps(device_id=None, deployment=None, lat=None,
                                 lon=None, alt=None, hdop=None):
     """
     Function to convert data to a bytes payload
 
     Parameters
     ----------
-        kdustick_id: string
-            the id of the prototype
+        device_id: string
+            the id of the device
         deployment: string
             the deployment sequence of the measurement
         lat: float
@@ -397,7 +405,7 @@ def convert_data_to_payload_gps(kdustick_id=None, deployment=None, lat=None,
 
     # payload gps: id(1) deploy(1) data_type(1) lat(3) lon(3) alt(2) hdop(1)
     # --> 12 bytes
-    payload.append(ord(kdustick_id))
+    payload.append(ord(device_id))
     payload.append(ord(deployment))
     payload.append(data_type)
     payload.append(((latb >> 16) & 0xFF))
@@ -509,27 +517,27 @@ deployment_seq = get_deployment_seq()
 time.sleep_ms(1000)
 data_gps = get_lat_lon_datetime_gps(time_searching_GPS)
 set_datetime()
-# blink_led(1, 1000, led_yellow)
+blink_led(1, 1000, led_yellow)
 
 # Send data to Sigfox. LED orange
 time.sleep_ms(1000)
-payload_gps = convert_data_to_payload_gps(kdustick_id=kdustick_id,
+payload_gps = convert_data_to_payload_gps(device_id=device_id,
                                           deployment=deployment_seq,
                                           lat=data_gps['latitude'],
                                           lon=data_gps['longitude'],
                                           alt=data_gps['altitude'],
                                           hdop=data_gps['hdop'])
 data_sent = send_data_Sigfox(bytes(payload_gps))
-# blink_led(1, 1000, led_orange)
+blink_led(1, 1000, led_orange)
 
 # Save data to SD. LED blue
 time.sleep_ms(1000)
 save_header()
-save_data(kdustick_id=kdustick_id, deployment=deployment_seq,
+save_data(device_id=device_id, deployment=deployment_seq,
           datetime=rtc.now(), lat=data_gps['latitude'],
           lon=data_gps['longitude'], alt=data_gps['altitude'],
           hdop=data_gps['hdop'], volt=volt, data_sent=data_sent)
-# blink_led(1, 1000, led_blue)
+blink_led(1, 1000, led_blue)
 
 # Enter to deep sleep. LED red
 time.sleep_ms(1000)
