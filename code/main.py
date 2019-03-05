@@ -25,7 +25,7 @@ deployment_seq = None
 # Time values in seconds of different variables
 time_searching_GPS = 30
 time_searching_Sigfox = 60
-time_to_deep_sleep = 300
+time_to_deep_sleep = 600
 
 # Boolean to save if data have been sent to Sigfox
 data_sent = False
@@ -454,9 +454,6 @@ def send_data_Sigfox(data):
     # wait until the module has joined the network
     start = time.ticks_ms()
     while data_sent < bytes_data:
-        time.sleep(1)
-        # print('Not yet sent to Sigfox...')
-
         # send bytes
         data_sent = s.send(data)
         # print(time.ticks_diff(start, time.ticks_ms()))
