@@ -27,6 +27,11 @@ time_searching_GPS = 30
 time_searching_Sigfox = 60
 time_to_deep_sleep = 300
 
+# data type we want to send to Sigfox
+# 0: device_id, deployment, latitude, altitude, hdop
+# 1: device_id, deployment, latitude, longitude, voltage
+data_type = 1
+
 # Boolean to save if data have been sent to Sigfox
 data_sent = False
 
@@ -370,13 +375,18 @@ def save_data(device_id=None, deployment=None, datetime=None, lat=None,
     os.unmount(sd_mount_dir)
 
 
-def convert_data_to_payload_gps(device_id=None, deployment=None, lat=None,
-                                lon=None, alt=None, hdop=None):
+def convert_data_to_bytes_payload(data_type=None, device_id=None,
+                                  deployment=None, lat=None,
+                                  lon=None, alt=None, hdop=None):
     """
     Function to convert data to a bytes payload
 
     Parameters
     ----------
+        data_type: int
+            data type we want to send to Sigfox.
+            0: device_id, deployment, latitude, altitude, hdop
+            1: device_id, deployment, latitude, longitude, voltage
         device_id: string
             the id of the device
         deployment: string
@@ -397,26 +407,49 @@ def convert_data_to_payload_gps(device_id=None, deployment=None, lat=None,
 
     """
     payload = []
-    latb = int(((lat + 90) / 180) * 0xFFFFFF)
-    lonb = int(((lon + 180) / 360) * 0xFFFFFF)
-    altb = int(round(float(alt), 0))
-    hdopb = int(float(hdop) * 10)
-    data_type = 0
 
-    # payload gps: id(1) deploy(1) data_type(1) lat(3) lon(3) alt(2) hdop(1)
-    # --> 12 bytes
-    payload.append(ord(device_id))
-    payload.append(ord(deployment))
-    payload.append(data_type)
-    payload.append(((latb >> 16) & 0xFF))
-    payload.append(((latb >> 8) & 0xFF))
-    payload.append((latb & 0xFF))
-    payload.append(((lonb >> 16) & 0xFF))
-    payload.append(((lonb >> 8) & 0xFF))
-    payload.append((lonb & 0xFF))
-    payload.append(((altb >> 8) & 0xFF))
-    payload.append((altb & 0xFF))
-    payload.append(hdopb & 0xFF)
+    if data_type == 0:
+        latb = int(((lat + 90) / 180) * 0xFFFFFF)
+        lonb = int(((lon + 180) / 360) * 0xFFFFFF)
+        altb = int(round(float(alt), 0))
+        hdopb = int(float(hdop) * 10)
+
+        # payload data: id(1) deploy(1) data_type(1) lat(3) lon(3) alt(2)
+        # hdop(1)
+        # --> 12 bytes
+        payload.append(ord(device_id))
+        payload.append(ord(deployment))
+        payload.append(data_type)
+        payload.append((latb >> 16) & 0xFF)
+        payload.append((latb >> 8) & 0xFF)
+        payload.append(latb & 0xFF)
+        payload.append((lonb >> 16) & 0xFF)
+        payload.append((lonb >> 8) & 0xFF)
+        payload.append(lonb & 0xFF)
+        payload.append((altb >> 8) & 0xFF)
+        payload.append(altb & 0xFF)
+        payload.append(hdopb & 0xFF)
+
+    if data_type == 1:
+        latb = int(((lat + 90) / 180) * 0xFFFFFF)
+        lonb = int(((lon + 180) / 360) * 0xFFFFFF)
+        voltb = int((volt / 5) * 0xFFFFFF)
+
+        # payload data: id(1) deploy(1) data_type(1) lat(3) lon(3) alt(2)
+        # hdop(1)
+        # --> 12 bytes
+        payload.append(ord(device_id))
+        payload.append(ord(deployment))
+        payload.append(data_type)
+        payload.append((latb >> 16) & 0xFF)
+        payload.append((latb >> 8) & 0xFF)
+        payload.append(latb & 0xFF)
+        payload.append((lonb >> 16) & 0xFF)
+        payload.append((lonb >> 8) & 0xFF)
+        payload.append(lonb & 0xFF)
+        payload.append((voltb >> 16) & 0xFF)
+        payload.append((voltb >> 8) & 0xFF)
+        payload.append(voltb & 0xFF)
 
     return payload
 
@@ -518,13 +551,14 @@ blink_led(1, 1000, led_yellow)
 
 # Send data to Sigfox. LED orange
 time.sleep_ms(1000)
-payload_gps = convert_data_to_payload_gps(device_id=device_id,
-                                          deployment=deployment_seq,
-                                          lat=data_gps['latitude'],
-                                          lon=data_gps['longitude'],
-                                          alt=data_gps['altitude'],
-                                          hdop=data_gps['hdop'])
-data_sent = send_data_Sigfox(bytes(payload_gps))
+payload_data = convert_data_to_bytes_payload(data_type=data_type,
+                                             device_id=device_id,
+                                             deployment=deployment_seq,
+                                             lat=data_gps['latitude'],
+                                             lon=data_gps['longitude'],
+                                             alt=data_gps['altitude'],
+                                             hdop=data_gps['hdop'])
+data_sent = send_data_Sigfox(bytes(payload_data))
 blink_led(1, 1000, led_orange)
 
 # Save data to SD. LED blue
