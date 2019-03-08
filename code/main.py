@@ -25,7 +25,7 @@ deployment_seq = None
 # Time values in seconds of different variables
 time_searching_GPS = 30
 time_searching_Sigfox = 60
-time_to_deep_sleep = 300
+time_to_deep_sleep = 600
 
 # data type we want to send to Sigfox
 # 0: device_id, deployment, latitude, altitude, hdop

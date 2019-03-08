@@ -7,6 +7,6 @@ It uses the Pytrack expansion board and the Sipy/Lopy module from Pycom.
 It needs an external Sigfox antenna connected to Pytrack, and an SD into the Pytrack to save data files.
 
 There are some time variables to adjust (in seconds):
-- time_searching_GPS = 30
-- time_searching_Sigfox = 60
-- time_to_deep_sleep = 300
+- time_searching_GPS
+- time_searching_Sigfox
+- time_to_deep_sleep
