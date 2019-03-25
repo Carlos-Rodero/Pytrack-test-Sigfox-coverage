@@ -217,7 +217,7 @@ def get_lat_lon_datetime_gps(time_searching_GPS):
 
         '''
         if gps.satellite_data_updated() and gps.valid:
-            # blink_led(1, 500, led_yellow)
+            blink_led(1, 500, led_yellow)
 
             timestamp_list = gps.timestamp
             time = (timestamp_list[0], timestamp_list[1],
